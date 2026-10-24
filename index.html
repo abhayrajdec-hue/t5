@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111411">
+  <title>KeyQuest — Typing practice, made playful</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #111411;
+      --panel: #191d19;
+      --panel-light: #20251f;
+      --line: #2a3029;
+      --text: #f1f3eb;
+      --muted: #858d82;
+      --green: #c2f970;
+      --green-dark: #25351b;
+      --red: #ff7777;
+      --yellow: #f3cb72;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--text);
+      background:
+        radial-gradient(ellipse at 50% -15%, rgba(144, 196, 92, .10), transparent 40%),
+        var(--bg);
+    }
+    button, select { font: inherit; }
+    button:focus-visible, select:focus-visible, textarea:focus-visible {
+      outline: 2px solid var(--green);
+      outline-offset: 3px;
+    }
+    .shell { max-width: 1100px; margin: 0 auto; padding: 0 28px; }
+    header {
+      height: 78px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 1px solid rgba(255,255,255,.055);
+    }
+    .brand { display: flex; align-items: center; gap: 11px; font-weight: 750; letter-spacing: -.5px; }
+    .brand-mark {
+      display: grid; place-items: center; width: 34px; height: 34px;
+      color: #15200d; background: var(--green); border-radius: 10px;
+      font-size: 17px; font-weight: 900;
+    }
+    .brand span:last-child { font-size: 17px; }
+    .header-note { color: var(--muted); font-size: 13px; }
+    main { padding: 54px 0 48px; }
+    .intro { text-align: center; margin-bottom: 34px; }
+    .eyebrow {
+      color: var(--green); font-size: 11px; letter-spacing: 2px;
+      text-transform: uppercase; font-weight: 800;
+    }
+    h1 { margin: 12px 0 9px; font-size: clamp(34px, 5vw, 48px); letter-spacing: -2.3px; line-height: 1.08; }
+    .intro p { margin: 0; color: var(--muted); font-size: 15px; }
+    .game {
+      max-width: 850px; margin: 0 auto; overflow: hidden;
+      background: var(--panel); border: 1px solid var(--line); border-radius: 18px;
+      box-shadow: 0 24px 80px rgba(0,0,0,.23);
+    }
+    .game-top {
+      min-height: 72px; padding: 16px 22px; display: flex; align-items: center;
+      justify-content: space-between; gap: 14px; border-bottom: 1px solid var(--line);
+    }
+    .settings { display: flex; align-items: center; gap: 9px; }
+    .setting-label { color: var(--muted); font-size: 12px; }
+    select, .icon-button {
+      color: var(--text); background: var(--panel-light);
+      border: 1px solid var(--line); border-radius: 9px;
+    }
+    select { padding: 9px 30px 9px 11px; cursor: pointer; font-size: 12px; }
+    .icon-button { width: 36px; height: 36px; cursor: pointer; font-size: 17px; }
+    .icon-button:hover { color: var(--green); border-color: #495342; }
+    .stats { display: flex; gap: 30px; }
+    .stat { min-width: 48px; }
+    .stat-label { display: block; color: var(--muted); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; }
+    .stat-value { display: block; margin-top: 3px; font-size: 19px; font-weight: 750; letter-spacing: -.5px; }
+    .stat-value.accent { color: var(--green); }
+    .progress-track { height: 3px; background: #2a3029; }
+    .progress-bar { height: 100%; width: 100%; background: var(--green); transform-origin: left; transition: width .25s linear; }
+    .game-body { padding: 27px 30px 30px; }
+    .play-status { display: flex; justify-content: space-between; align-items: center; margin-bottom: 17px; }
+    .status-pill { color: var(--muted); font-size: 12px; display: flex; align-items: center; gap: 8px; }
+    .status-dot { width: 7px; height: 7px; border-radius: 50%; background: #687064; }
+    .status-pill.active { color: var(--green); }
+    .status-pill.active .status-dot { background: var(--green); box-shadow: 0 0 10px #c2f97080; }
+    .keyboard-hint { color: var(--muted); font-size: 11px; }
+    .passage {
+      min-height: 164px; padding: 21px 22px;
+      background: #141714; border: 1px solid #252b24; border-radius: 12px;
+      color: #737c70; font: 500 20px/1.9 "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+      letter-spacing: .15px; overflow-wrap: anywhere;
+    }
+    .passage .correct { color: var(--green); }
+    .passage .incorrect { color: var(--red); background: rgba(255,119,119,.12); border-radius: 2px; }
+    .passage .current { position: relative; }
+    .passage .current::before {
+      content: ""; position: absolute; left: -2px; top: 4px; bottom: 2px;
+      width: 2px; border-radius: 2px; background: var(--green);
+      animation: blink 1s steps(2, start) infinite;
+    }
+    @keyframes blink { to { visibility: hidden; } }
+    .type-area {
+      display: block; width: 100%; height: 1px; padding: 0; margin: 0;
+      opacity: 0; resize: none; border: 0; position: absolute;
+      left: -9999px; pointer-events: none;
+    }
+    .controls { display: flex; align-items: center; justify-content: center; gap: 11px; margin-top: 23px; }
+    .primary, .secondary {
+      border-radius: 10px; padding: 12px 20px; cursor: pointer;
+      font-size: 13px; font-weight: 750; transition: transform .15s, background .15s;
+    }
+    .primary { color: #17210f; background: var(--green); border: 1px solid var(--green); }
+    .primary:hover { background: #d2ff8d; transform: translateY(-1px); }
+    .secondary { color: #c1c7bc; background: transparent; border: 1px solid #343b32; }
+    .secondary:hover { border-color: #626d5c; color: var(--text); }
+    .result {
+      display: none; margin-top: 20px; padding: 16px 18px; border-radius: 11px;
+      border: 1px solid #35452b; background: #1c2617; text-align: center;
+    }
+    .result.show { display: block; }
+    .result strong { color: var(--green); font-size: 17px; }
+    .result p { margin: 5px 0 0; color: #a8b19f; font-size: 13px; }
+    .below { display: flex; justify-content: center; gap: 24px; margin-top: 23px; color: var(--muted); font-size: 11px; }
+    .below span { display: flex; align-items: center; gap: 7px; }
+    .below b { color: #c7cec0; font-weight: 600; }
+    footer { text-align: center; color: #656d62; font-size: 11px; padding: 9px 0 30px; }
+    @media (max-width: 640px) {
+      .shell { padding: 0 16px; }
+      header { height: 66px; }
+      .header-note { font-size: 11px; }
+      main { padding-top: 37px; }
+      .intro { margin-bottom: 25px; }
+      .game-top { padding: 15px; align-items: flex-start; flex-direction: column; }
+      .settings { width: 100%; }
+      .stats { width: 100%; justify-content: space-between; gap: 10px; }
+      .game-body { padding: 20px 15px; }
+      .passage { min-height: 190px; padding: 16px; font-size: 17px; line-height: 1.85; }
+      .keyboard-hint { display: none; }
+      .below { gap: 13px; flex-wrap: wrap; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <div class="brand"><span class="brand-mark">K</span><span>keyquest</span></div>
+      <div class="header-note">A little practice goes a long way <span aria-hidden="true">✦</span></div>
+    </header>
+
+    <main>
+      <section class="intro">
+        <div class="eyebrow">Your daily typing quest</div>
+        <h1>Find your typing flow.</h1>
+        <p>Take a breath, find your rhythm, and watch your skills grow.</p>
+      </section>
+
+      <section class="game" aria-label="Typing game">
+        <div class="game-top">
+          <div class="settings">
+            <span class="setting-label">Time</span>
+            <select id="time-select" aria-label="Choose game duration">
+              <option value="30">30 seconds</option>
+              <option value="60">60 seconds</option>
+            </select>
+            <span class="setting-label" style="margin-left:8px">Level</span>
+            <select id="level-select" aria-label="Choose difficulty">
+              <option value="easy">Easy</option>
+              <option value="medium" selected>Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+            <button class="icon-button" id="new-text" type="button" aria-label="Get a new passage" title="New passage">↻</button>
+          </div>
+          <div class="stats" aria-live="polite">
+            <div class="stat"><span class="stat-label">Time</span><span class="stat-value" id="time">30</span></div>
+            <div class="stat"><span class="stat-label">WPM</span><span class="stat-value accent" id="wpm">0</span></div>
+            <div class="stat"><span class="stat-label">Accuracy</span><span class="stat-value" id="accuracy">100%</span></div>
+          </div>
+        </div>
+        <div class="progress-track" aria-hidden="true"><div class="progress-bar" id="progress"></div></div>
+        <div class="game-body">
+          <div class="play-status">
+            <div class="status-pill" id="status"><span class="status-dot"></span><span id="status-text">Ready when you are</span></div>
+            <div class="keyboard-hint">Tip: accuracy first, speed will follow</div>
+          </div>
+          <div class="passage" id="passage" aria-label="Text to type"></div>
+          <textarea class="type-area" id="typing-input" aria-label="Type the passage here" autocapitalize="off" autocomplete="off" autocorrect="off" spellcheck="false"></textarea>
+          <div class="controls">
+            <button class="primary" id="start-button" type="button">Start typing <span aria-hidden="true">→</span></button>
+            <button class="secondary" id="restart-button" type="button">Restart</button>
+          </div>
+          <div class="result" id="result" role="status">
+            <strong id="result-title">Quest complete!</strong>
+            <p id="result-copy"></p>
+          </div>
+        </div>
+      </section>
+
+      <div class="below">
+        <span>⌨ <b>No pressure</b> — just practice</span>
+        <span>⚡ <b>Track progress</b> one round at a time</span>
+        <span>✦ <b>Keep it fun</b></span>
+      </div>
+    </main>
+    <footer>Made for curious fingers and growing skills.</footer>
+  </div>
+
+  <script>
+    const passages = {
+      easy: [
+        "A small green frog sat by the pond. It watched a tiny bug fly past, then jumped into the cool water. The sun was warm and the day was calm.",
+        "Mia has a red kite. She runs up the hill and lets it go. The kite lifts into the blue sky. She smiles as it dances in the wind.",
+        "Every day is a new chance to learn. Take your time, try your best, and enjoy each little win. You are getting better with every word."
+      ],
+      medium: [
+        "A good book can take you anywhere. It can lead you through a quiet forest, across a busy city, or deep beneath the ocean waves. All you need is a little imagination.",
+        "The best way to build a new skill is to show up and practice. Small steps add up over time, and soon the things that once felt difficult become second nature.",
+        "On Saturday morning, the neighborhood garden came alive. Friends shared fresh fruit, traded stories, and planted bright flowers that would bloom all summer long."
+      ],
+      hard: [
+        "Curiosity is the quiet engine behind every great discovery. Ask thoughtful questions, explore unfamiliar ideas, and remember that a wrong turn can reveal an unexpected path.",
+        "At 7:45, the old station clock chimed twice; commuters hurried past, clutching coffee, umbrellas, and half-finished plans for the day ahead.",
+        "A patient typist doesn't chase every keystroke. Instead, they build a steady rhythm—one accurate word, one deliberate breath, and one small improvement at a time."
+      ]
+    };
+
+    const input = document.getElementById("typing-input");
+    const passageEl = document.getElementById("passage");
+    const timeEl = document.getElementById("time");
+    const wpmEl = document.getElementById("wpm");
+    const accuracyEl = document.getElementById("accuracy");
+    const progressEl = document.getElementById("progress");
+    const statusEl = document.getElementById("status");
+    const statusText = document.getElementById("status-text");
+    const resultEl = document.getElementById("result");
+    const timeSelect = document.getElementById("time-select");
+    const levelSelect = document.getElementById("level-select");
+
+    let target = "";
+    let duration = Number(timeSelect.value);
+    let secondsLeft = duration;
+    let startedAt = null;
+    let timerId = null;
+    let finished = false;
+
+    function choosePassage() {
+      const options = passages[levelSelect.value];
+      return options[Math.floor(Math.random() * options.length)];
+    }
+
+    function renderPassage(typed = "") {
+      passageEl.replaceChildren();
+      for (let i = 0; i < target.length; i++) {
+        const char = document.createElement("span");
+        char.textContent = target[i];
+        if (i < typed.length) {
+          char.className = typed[i] === target[i] ? "correct" : "incorrect";
+        } else if (i === typed.length && !finished) {
+          char.className = "current";
+        }
+        passageEl.appendChild(char);
+      }
+    }
+
+    function setStatus(message, active = false) {
+      statusText.textContent = message;
+      statusEl.classList.toggle("active", active);
+    }
+
+    function resetGame(newPassage = false) {
+      clearInterval(timerId);
+      timerId = null;
+      duration = Number(timeSelect.value);
+      secondsLeft = duration;
+      startedAt = null;
+      finished = false;
+      input.value = "";
+      input.disabled = false;
+      if (newPassage || !target) target = choosePassage();
+      timeEl.textContent = secondsLeft;
+      wpmEl.textContent = "0";
+      accuracyEl.textContent = "100%";
+      progressEl.style.width = "100%";
+      resultEl.classList.remove("show");
+      setStatus("Ready when you are");
+      renderPassage();
+    }
+
+    function updateStats() {
+      const typed = input.value;
+      let correct = 0;
+      for (let i = 0; i < typed.length; i++) {
+        if (typed[i] === target[i]) correct++;
+      }
+      const accuracy = typed.length ? Math.round(correct / typed.length * 100) : 100;
+      const elapsed = startedAt ? Math.max((Date.now() - startedAt) / 1000, 1) : 0;
+      const wpm = elapsed ? Math.round((correct / 5) / (elapsed / 60)) : 0;
+      wpmEl.textContent = wpm;
+      accuracyEl.textContent = accuracy + "%";
+      renderPassage(typed);
+
+      if (typed.length >= target.length) finishGame("passage");
+    }
+
+    function finishGame(reason) {
+      if (finished) return;
+      finished = true;
+      clearInterval(timerId);
+      timerId = null;
+      input.disabled = true;
+      renderPassage(input.value);
+      setStatus("Quest complete");
+      const typed = input.value;
+      let correct = 0;
+      for (let i = 0; i < typed.length; i++) if (typed[i] === target[i]) correct++;
+      const accuracy = typed.length ? Math.round(correct / typed.length * 100) : 100;
+      const elapsed = startedAt ? Math.max((Date.now() - startedAt) / 1000, 1) : 1;
+      const wpm = Math.round((correct / 5) / (elapsed / 60));
+      wpmEl.textContent = wpm;
+      accuracyEl.textContent = accuracy + "%";
+      const title = document.getElementById("result-title");
+      title.textContent = accuracy >= 95 ? "Beautifully done! ✦" : "Quest complete!";
+      document.getElementById("result-copy").textContent =
+        reason === "time" ? `Time's up — you typed at ${wpm} WPM with ${accuracy}% accuracy. Ready for another round?`
+          : `You finished at ${wpm} WPM with ${accuracy}% accuracy. Nice work!`;
+      resultEl.classList.add("show");
+    }
+
+    function begin() {
+      if (finished) resetGame();
+      if (!startedAt) {
+        startedAt = Date.now();
+        setStatus("You're in the flow", true);
+        timerId = setInterval(() => {
+          secondsLeft = Math.max(0, secondsLeft - 1);
+          timeEl.textContent = secondsLeft;
+          progressEl.style.width = (secondsLeft / duration * 100) + "%";
+          if (secondsLeft === 0) finishGame("time");
+        }, 1000);
+      }
+      input.focus();
+    }
+
+    document.getElementById("start-button").addEventListener("click", begin);
+    document.getElementById("restart-button").addEventListener("click", () => resetGame());
+    document.getElementById("new-text").addEventListener("click", () => resetGame(true));
+    timeSelect.addEventListener("change", () => resetGame());
+    levelSelect.addEventListener("change", () => resetGame(true));
+    passageEl.addEventListener("click", () => {
+      if (!finished) { begin(); input.focus(); }
+    });
+    input.addEventListener("input", () => {
+      if (finished) return;
+      if (input.value.length && !startedAt) begin();
+      updateStats();
+    });
+    input.addEventListener("keydown", event => {
+      if (event.key === "Tab") event.preventDefault();
+      if (event.key === "Enter") event.preventDefault();
+    });
+
+    resetGame(true);
+  </script>
+</body>
+</html>
